@@ -1,41 +1,40 @@
-import os
 import csv
-import sys
-import re
+import pandas as pd
 
 from surprise import Dataset
 from surprise import Reader
 
-from collections import defaultdict
 
-
-class MovieLens:
-
-
-	def __init__(self):
+class DataPreprocessing:
+	def __init__(self, path):
 		self.columns = 'user item rating timestamp'
-		self.path = {
-			'rating': os.path.join('..', 'data', 'ratings.csv')
-			'movie': os.path.join('..', 'data', 'movies.csv')
-		}
+		self.path = path
+
+		self.movie = None
+		self.rating = None
+
 		self.movie_id_to_name = {}
 		self.name_to_movie_id = {}
 
+		self.init()
 
-	def load_dataset(self):
+	def init(self):
+		self.load()
+		self.set_movie_hash_map()
+
+	def load(self):
+		self.movie = pd.read_csv(self.path['movie'])
+		self.rating = pd.read_csv(self.path['rating'])
+
+	def set_movie_hash_map(self):
+		movie = self.movie
+		self.movie_id_to_name = movie[['movieId', 'title']].set_index('movieId').to_dict()['title']
+		self.name_to_movie_id = movie[['movieId', 'title']].set_index('title').to_dict()['movieId']
+
+	def load_surprise_dataset(self):
 		# Rating dataset
 		reader = Reader(line_format=self.columns, sep=',', skip_lines=1)
 		rating = Dataset.load_from_file(self.path['rating'], reader=reader)
-
-		# Make movie id <-> name hash map
-		with open(self.path['movie'], newline='', encoding='ISO-8859-1') as file:
-			movie = csv.reader(file)
-			next(movie)
-			for row in movie:
-				movie_id = int(row[0])
-				movie_name = row[1]
-				self.movie_id_to_name[movie_id] = movie_name
-				self.name_to_movie_id[movie_name] = movie_id
 
 		return rating
 
@@ -44,7 +43,7 @@ class MovieLens:
 		hit_user = False
 
 		with open(self.path['rating'], newline='') as file:
-			rating = csv.reader(file):
+			rating = csv.reader(file)
 			next(rating)
 			for row in rating:
 				user_id = int(row[0])
@@ -58,28 +57,13 @@ class MovieLens:
 
 			return user_rating
 
-	def get_popularity_rank(self):
-		rating = {}
-		ranking = {}
-
-		with open(self.path['rating'], newline='') as file:
-			rating = csv.reader(file)
-			next(rating)
-			for row in rating:
-				movie_id = int(row[1])
-				if movie_id in ratings:
-					rating[movie_id] += 1
-				else:
-					rating[movie_id] = 1
-
-		rank = 1
-		rating = sorted(rating.items(), key=lambda x: x[1], reverse=True)
-		for movie_id, rating_cnt in rating:
-			ranking[movie_id] = rank
-			rank += 1
+	def rank_popularity(self):
+		data = self.rating
+		rating = data.groupby(by='movieId')['userId'].count().reset_index()
+		rating = rating.sort_values(by=['userId', 'movieId'], ascending=[False, True])
+		ranking = {movie_id: i+1 for i, movie_id in enumerate(rating['movieId'])}
 
 		return ranking
-
 
 	def get_genre(self):
 		genre = {}
@@ -112,7 +96,7 @@ class MovieLens:
 		return genre
 
 	def get_year(self):
-		
+		pass
 
 
 

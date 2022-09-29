@@ -1,9 +1,7 @@
-import itertools
 from surprise import accuracy
 
 
 class RecommenderMetrics(object):
-
 	@staticmethod
 	def calc_mae(prediction):
 		return accuracy.mae(prediction, verbose=False)
@@ -13,14 +11,15 @@ class RecommenderMetrics(object):
 		return accuracy.rmse(prediction, verbose=False)
 
 	@staticmethod
-	def get_top_n(prediction, n, minimum_rating):
+	def get_top_n(prediction, n, rating_threshold):
 		top_n = {}
 		for user_id, movie_id, actual_rating, estimate_rating, _ in prediction:
-			if estimate_rating >= minimum_rating:
-				if int(user_id) in top_n:
-					top_n[int(user_id)].append((int(movie_id), estimate_rating))
+			if estimate_rating >= rating_threshold:
+				user_id = int(user_id)
+				if user_id in top_n:
+					top_n[user_id].append((int(movie_id), estimate_rating))
 				else:
-					top_n[int(user_id)] = [(int(movie_id), estimate_rating)]
+					top_n[user_id] = [(int(movie_id), estimate_rating)]
 
 		for user_id, rating in top_n.items():
 			rating = sorted(rating, key=lambda x: x[1], reverse=True)
@@ -62,4 +61,7 @@ class RecommenderMetrics(object):
 
 
 		return hit_cnt / total_cnt
-		
+
+	@staticmethod
+	def calc_rating_hit_rate():
+		pass
